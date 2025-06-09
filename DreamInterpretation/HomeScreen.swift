@@ -48,9 +48,7 @@ struct DashboardView: View {
             VStack(spacing: 25) {
                 // Header
                 VStack(spacing: 10) {
-                    Text("Good Morning")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
+                  
                     
                     Text("Ready to explore your dreams?")
                         .font(.largeTitle)
@@ -59,29 +57,7 @@ struct DashboardView: View {
                 }
                 .padding(.top)
                 
-                // Quick Stats Dashboard
-                HStack(spacing: 15) {
-                    DashboardCard(
-                        icon: "moon.stars.fill",
-                        title: "Dreams",
-                        value: "12",
-                        color: .blue
-                    )
-                    
-                    DashboardCard(
-                        icon: "chart.line.uptrend.xyaxis",
-                        title: "This Week",
-                        value: "3",
-                        color: .green
-                    )
-                    
-                    DashboardCard(
-                        icon: "heart.fill",
-                        title: "Insights",
-                        value: "8",
-                        color: .pink
-                    )
-                }
+                
                 
                 // Main Actions
                 VStack(spacing: 15) {
@@ -103,14 +79,7 @@ struct DashboardView: View {
                         )
                     }
                     
-                    NavigationLink(destination: StatsView()) {
-                        ActionCard(
-                            icon: "chart.bar.fill",
-                            title: "Dream Insights",
-                            subtitle: "Discover patterns in your dreams",
-                            color: .orange
-                        )
-                    }
+
                 }
                 
                 Spacer(minLength: 20)
@@ -184,49 +153,13 @@ struct ActionCard: View {
     }
 }
 
-struct StatsView: View {
-    var body: some View {
-        Text("Dream Insights Coming Soon")
-            .font(.title2)
-            .foregroundColor(.secondary)
-            .navigationTitle("Insights")
-            .navigationBarTitleDisplayMode(.large)
-    }
-}
+
 
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     
     var body: some View {
         List {
-            Section("Account") {
-                HStack {
-                    Image(systemName: "person.circle.fill")
-                        .foregroundColor(.blue)
-                    Text("Profile")
-                }
-                
-                HStack {
-                    Image(systemName: "bell.fill")
-                        .foregroundColor(.orange)
-                    Text("Notifications")
-                }
-            }
-            
-            Section("App") {
-                HStack {
-                    Image(systemName: "moon.fill")
-                        .foregroundColor(.purple)
-                    Text("Dark Mode")
-                }
-                
-                HStack {
-                    Image(systemName: "questionmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Help & Support")
-                }
-            }
-            
             Section {
                 Button(action: {
                     authManager.logout()

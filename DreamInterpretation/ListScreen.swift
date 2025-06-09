@@ -8,56 +8,13 @@ import SwiftUI
 
 struct ListScreen: View {
     @State private var searchText = ""
-    
-    // Sample dream data for UI demonstration
-    private let sampleDreams = [
-        DreamEntry(
-            id: UUID(),
-            title: "Flying Over the City",
-            dreamText: "I was soaring through the clouds above a beautiful cityscape...",
-            interpretation: "Flying dreams often represent freedom and ambition...",
-            date: Date().addingTimeInterval(-86400),
-            mood: "Excited"
-        ),
-        DreamEntry(
-            id: UUID(),
-            title: "Lost in a Forest",
-            dreamText: "I found myself wandering through a dark, mysterious forest...",
-            interpretation: "Forest dreams can symbolize exploration of the unconscious...",
-            date: Date().addingTimeInterval(-172800),
-            mood: "Anxious"
-        ),
-        DreamEntry(
-            id: UUID(),
-            title: "Meeting an Old Friend",
-            dreamText: "I encountered my childhood friend in a bright, sunny meadow...",
-            interpretation: "Dreams of old friends often reflect nostalgia and connection...",
-            date: Date().addingTimeInterval(-259200),
-            mood: "Happy"
-        ),
-        DreamEntry(
-            id: UUID(),
-            title: "Swimming with Dolphins",
-            dreamText: "I was diving deep into crystal clear waters with playful dolphins...",
-            interpretation: "Water dreams represent emotions and spiritual cleansing...",
-            date: Date().addingTimeInterval(-345600),
-            mood: "Peaceful"
-        ),
-        DreamEntry(
-            id: UUID(),
-            title: "Climbing a Mountain",
-            dreamText: "I was ascending a steep mountain path with determination...",
-            interpretation: "Mountain climbing dreams symbolize personal challenges...",
-            date: Date().addingTimeInterval(-432000),
-            mood: "Determined"
-        )
-    ]
+    @EnvironmentObject var firestoreManager: FirestoreManager
     
     var filteredDreams: [DreamEntry] {
         if searchText.isEmpty {
-            return sampleDreams
+            return firestoreManager.dreams
         } else {
-            return sampleDreams.filter { dream in
+            return firestoreManager.dreams.filter { dream in
                 dream.title.localizedCaseInsensitiveContains(searchText) ||
                 dream.dreamText.localizedCaseInsensitiveContains(searchText) ||
                 dream.mood.localizedCaseInsensitiveContains(searchText)
@@ -72,7 +29,21 @@ struct ListScreen: View {
                 .padding(.horizontal)
                 .padding(.top, 10)
             
-            if filteredDreams.isEmpty {
+            if firestoreManager.isLoading && firestoreManager.dreams.isEmpty {
+                // Loading State
+                VStack(spacing: 20) {
+                    Spacer()
+                    
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    
+                    Text("Loading your dreams...")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                }
+            } else if filteredDreams.isEmpty {
                 // Empty State
                 VStack(spacing: 20) {
                     Spacer()
@@ -103,6 +74,15 @@ struct ListScreen: View {
                         }
                     }
                     
+                    // Show error message if any
+                    if !firestoreManager.errorMessage.isEmpty {
+                        Text(firestoreManager.errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.top)
+                    }
+                    
                     Spacer()
                 }
                 .padding(.horizontal, 40)
@@ -119,6 +99,9 @@ struct ListScreen: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
+                }
+                .refreshable {
+                    firestoreManager.refreshForCurrentUser()
                 }
             }
         }

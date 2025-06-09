@@ -10,6 +10,7 @@ struct LoginScreen: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var email = ""
     @State private var password = ""
+    @State private var isSignUpMode = false
     
     var body: some View {
         NavigationStack {
@@ -40,28 +41,51 @@ struct LoginScreen: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .textInputAutocapitalization(.never)
                             .keyboardType(.emailAddress)
+                            .autocorrectionDisabled()
                         
                         SecureField("Password", text: $password)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                     }
                     
-                    Button(action: {
-                        authManager.login()
-                    }) {
-                        Text("Sign In")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(10)
+                    // Error message
+                    if !authManager.errorMessage.isEmpty {
+                        Text(authManager.errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
                     }
                     
                     Button(action: {
-                        // Handle sign up - for UI only
-                        authManager.login()
+                        Task {
+                            if isSignUpMode {
+                                await authManager.signUp(email: email, password: password)
+                            } else {
+                                await authManager.signIn(email: email, password: password)
+                            }
+                        }
                     }) {
-                        Text("Create Account")
+                        HStack {
+                            if authManager.isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .foregroundColor(.white)
+                            }
+                            Text(isSignUpMode ? "Create Account" : "Sign In")
+                                .font(.headline)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isFormValid ? Color.blue : Color.gray)
+                        .cornerRadius(10)
+                    }
+                    .disabled(!isFormValid || authManager.isLoading)
+                    
+                    Button(action: {
+                        isSignUpMode.toggle()
+                        authManager.errorMessage = "" // Clear any existing errors
+                    }) {
+                        Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Create Account")
                             .font(.subheadline)
                             .foregroundColor(.blue)
                     }
@@ -76,6 +100,10 @@ struct LoginScreen: View {
             }
             .padding(.horizontal, 30)
         }
+    }
+    
+    private var isFormValid: Bool {
+        !email.isEmpty && email.contains("@") && password.count >= 6
     }
 }
 

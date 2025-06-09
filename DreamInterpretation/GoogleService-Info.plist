@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyAtyqjnLoPqhfoMdZJvqGKiCLUOCTMGzr8</string>
+	<string>AIzaSyCCd7LFTvmuSftSo9zmE7--QJHdvQRGyQE</string>
 	<key>GCM_SENDER_ID</key>
-	<string>39573230434</string>
+	<string>729945111728</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.com.DreamInterpretation</string>
+	<string>Dream</string>
 	<key>PROJECT_ID</key>
-	<string>dream-interpretation-70f91</string>
+	<string>dreaminterpretationapp-16e46</string>
 	<key>STORAGE_BUCKET</key>
-	<string>dream-interpretation-70f91.firebasestorage.app</string>
+	<string>dreaminterpretationapp-16e46.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:39573230434:ios:0baf5459d044f2a4b4d23b</string>
+	<string>1:729945111728:ios:55804d335047e82c714f75</string>
 </dict>
 </plist>

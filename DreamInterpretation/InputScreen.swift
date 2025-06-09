@@ -64,33 +64,7 @@ struct InputScreen: View {
                         )
                 }
                 
-                // Quick Prompts
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Need inspiration? Try these prompts:")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 10) {
-                        PromptButton(text: "Who was in your dream?") {
-                            appendPrompt("People in my dream: ")
-                        }
-                        
-                        PromptButton(text: "Where did it take place?") {
-                            appendPrompt("Location: ")
-                        }
-                        
-                        PromptButton(text: "What emotions did you feel?") {
-                            appendPrompt("I felt: ")
-                        }
-                        
-                        PromptButton(text: "What colors do you remember?") {
-                            appendPrompt("Colors I remember: ")
-                        }
-                    }
-                }
+
                 
                 // Action Buttons
                 VStack(spacing: 15) {
@@ -140,29 +114,6 @@ struct InputScreen: View {
         }
     }
     
-    private func appendPrompt(_ prompt: String) {
-        if !dreamText.isEmpty && !dreamText.hasSuffix("\n") {
-            dreamText += "\n"
-        }
-        dreamText += prompt
-    }
-}
-
-struct PromptButton: View {
-    let text: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(text)
-                .font(.caption)
-                .foregroundColor(.blue)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(8)
-        }
-    }
 }
 
 #Preview {

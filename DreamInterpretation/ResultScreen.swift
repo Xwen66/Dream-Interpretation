@@ -2,18 +2,22 @@
 //  ResultScreen.swift
 //  DreamInterpretation
 //
-//  Created by Simon Xie on 2025/5/26.
-//
 
 import SwiftUI
+import FirebaseAuth
 
 struct ResultScreen: View {
     let dreamText: String?
     let dreamEntry: DreamEntry?
     
     @Environment(\.dismiss) private var dismiss
-    @State private var showingShareSheet = false
+    @EnvironmentObject var firestoreManager: FirestoreManager
     @State private var isLoading = false
+    @State private var selectedMood = "Happy"
+    @State private var customTitle = ""
+    @State private var showingSaveOptions = false
+    
+    private let moodOptions = ["Happy", "Excited", "Peaceful", "Anxious", "Scared", "Worried", "Sad", "Lonely", "Determined", "Confident"]
     
     // Initialize with either new dream text or existing dream entry
     init(dreamText: String) {
@@ -53,7 +57,16 @@ struct ResultScreen: View {
     }
     
     private var dreamTitle: String {
-        dreamEntry?.title ?? "Your Dream Interpretation"
+        if !customTitle.isEmpty {
+            return customTitle
+        }
+        return dreamEntry?.title ?? generateAutomaticTitle()
+    }
+    
+    private func generateAutomaticTitle() -> String {
+        let words = currentDreamText.components(separatedBy: .whitespaces)
+        let firstWords = Array(words.prefix(4)).joined(separator: " ")
+        return firstWords.isEmpty ? "My Dream" : firstWords + "..."
     }
     
     var body: some View {
@@ -129,13 +142,18 @@ struct ResultScreen: View {
                 // Action Buttons
                 VStack(spacing: 15) {
                     if dreamText != nil {
-                        // New dream actions
+                        // New dream save button
                         Button(action: {
-                            // Save dream functionality - UI only
-                            dismiss()
+                            showingSaveOptions = true
                         }) {
                             HStack {
-                                Image(systemName: "heart.fill")
+                                if firestoreManager.isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .foregroundColor(.white)
+                                } else {
+                                    Image(systemName: "heart.fill")
+                                }
                                 Text("Save Dream")
                                     .fontWeight(.semibold)
                             }
@@ -146,22 +164,7 @@ struct ResultScreen: View {
                             .background(Color.green)
                             .cornerRadius(12)
                         }
-                    }
-                    
-                    Button(action: {
-                        showingShareSheet = true
-                    }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("Share Interpretation")
-                                .fontWeight(.semibold)
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
+                        .disabled(firestoreManager.isLoading)
                     }
                     
                     if dreamEntry != nil {
@@ -175,6 +178,14 @@ struct ResultScreen: View {
                             .font(.subheadline)
                             .foregroundColor(.blue)
                         }
+                    }
+                    
+                    // Show error message if any
+                    if !firestoreManager.errorMessage.isEmpty {
+                        Text(firestoreManager.errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
                     }
                 }
                 
@@ -191,8 +202,20 @@ struct ResultScreen: View {
                 }
             }
         }
-        .sheet(isPresented: $showingShareSheet) {
-            ShareSheet(items: [interpretation])
+
+        .sheet(isPresented: $showingSaveOptions) {
+            SaveDreamSheet(
+                dreamText: currentDreamText,
+                interpretation: interpretation,
+                customTitle: $customTitle,
+                selectedMood: $selectedMood,
+                moodOptions: moodOptions,
+                onSave: {
+                    Task {
+                        await saveDream()
+                    }
+                }
+            )
         }
         .onAppear {
             if dreamText != nil {
@@ -206,6 +229,26 @@ struct ResultScreen: View {
         isLoading = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             isLoading = false
+        }
+    }
+    
+    private func saveDream() async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let dream = DreamEntry(
+            title: dreamTitle,
+            dreamText: currentDreamText,
+            interpretation: interpretation,
+            date: Date(),
+            mood: selectedMood,
+            userId: userId
+        )
+        
+        await firestoreManager.saveDream(dream)
+        
+        if firestoreManager.errorMessage.isEmpty {
+            showingSaveOptions = false
+            dismiss()
         }
     }
 }
@@ -261,14 +304,89 @@ struct LoadingView: View {
     }
 }
 
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
+struct SaveDreamSheet: View {
+    let dreamText: String
+    let interpretation: String
+    @Binding var customTitle: String
+    @Binding var selectedMood: String
+    let moodOptions: [String]
+    let onSave: () -> Void
     
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 25) {
+                VStack(spacing: 15) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.green)
+                    
+                    Text("Save Your Dream")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                .padding(.top)
+                
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Dream Title")
+                        .font(.headline)
+                    
+                    TextField("Enter a title for your dream", text: $customTitle)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("How did this dream make you feel?")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 10) {
+                        ForEach(moodOptions, id: \.self) { mood in
+                            Button(action: {
+                                selectedMood = mood
+                            }) {
+                                Text(mood)
+                                    .font(.subheadline)
+                                    .foregroundColor(selectedMood == mood ? .white : .blue)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(selectedMood == mood ? Color.blue : Color.blue.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    onSave()
+                }) {
+                    Text("Save Dream")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal)
+            .navigationTitle("Save Dream")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview("New Dream Result") {
