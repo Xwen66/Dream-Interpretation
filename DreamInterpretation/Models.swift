@@ -9,6 +9,109 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 
+// MARK: - AI Service
+
+class AIService: ObservableObject {
+    private let apiKey = "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"
+    private let baseURL = "https://openrouter.ai/api/v1/chat/completions"
+    
+    @Published var isLoading = false
+    @Published var errorMessage = ""
+    
+    func interpretDream(_ dreamText: String) async -> String {
+        await MainActor.run {
+            isLoading = true
+            errorMessage = ""
+        }
+        
+        // Step 1: Generate prompt that combines with user input
+        let prompt = """
+        You are a dream interpreter. The following is a dream from me, interpret the dream for me:
+        
+        \(dreamText)
+        
+        Please provide a detailed interpretation that includes:
+        1. Key symbols and their meanings
+        2. Emotional themes present in the dream
+        3. Possible connections to waking life
+        4. Guidance or insights for personal growth
+        
+        Format your response in a clear, empathetic, and insightful manner.
+        """
+        
+        let requestBody: [String: Any] = [
+            "model": "anthropic/claude-3.5-sonnet",
+            "messages": [
+                [
+                    "role": "user",
+                    "content": prompt
+                ]
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.7
+        ]
+        
+        do {
+            guard let url = URL(string: baseURL) else {
+                await MainActor.run {
+                    self.errorMessage = "Invalid API URL"
+                    self.isLoading = false
+                }
+                return "Unable to connect to AI service."
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Dream-Interpretation-App", forHTTPHeaderField: "HTTP-Referer")
+            
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("HTTP Status Code: \(httpResponse.statusCode)")
+            }
+            
+            if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let choices = jsonResponse["choices"] as? [[String: Any]],
+               let firstChoice = choices.first,
+               let message = firstChoice["message"] as? [String: Any],
+               let content = message["content"] as? String {
+                
+                await MainActor.run {
+                    self.isLoading = false
+                }
+                return content.trimmingCharacters(in: .whitespacesAndNewlines)
+            } else {
+                // Try to parse error message
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let error = jsonResponse["error"] as? [String: Any],
+                   let errorMessage = error["message"] as? String {
+                    await MainActor.run {
+                        self.errorMessage = "AI Error: \(errorMessage)"
+                        self.isLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.errorMessage = "Failed to parse AI response"
+                        self.isLoading = false
+                    }
+                }
+                return "Unable to interpret dream at this time. Please try again."
+            }
+            
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Network error: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+            return "Unable to connect to AI service. Please check your internet connection."
+        }
+    }
+}
+
 // MARK: - Data Models
 
 struct DreamEntry: Identifiable, Codable {

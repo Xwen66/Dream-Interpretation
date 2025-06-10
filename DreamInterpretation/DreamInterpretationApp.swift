@@ -21,6 +21,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct DreamInterpretationApp: App {
     @StateObject private var authManager = AuthManager()
     @StateObject private var firestoreManager = FirestoreManager()
+    @StateObject private var aiService = AIService()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
     var body: some Scene {
@@ -29,6 +30,7 @@ struct DreamInterpretationApp: App {
                 HomeScreen()
                     .environmentObject(authManager)
                     .environmentObject(firestoreManager)
+                    .environmentObject(aiService)
                     .onChange(of: authManager.isLoggedIn) { isLoggedIn in
                         if isLoggedIn {
                             firestoreManager.refreshForCurrentUser()

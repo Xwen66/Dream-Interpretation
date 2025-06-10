@@ -12,10 +12,13 @@ struct ResultScreen: View {
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var firestoreManager: FirestoreManager
+    @EnvironmentObject var aiService: AIService
     @State private var isLoading = false
     @State private var selectedMood = "Happy"
     @State private var customTitle = ""
     @State private var showingSaveOptions = false
+    @State private var aiInterpretation = ""
+    @State private var hasStartedInterpretation = false
     
     private let moodOptions = ["Happy", "Excited", "Peaceful", "Anxious", "Scared", "Worried", "Sad", "Lonely", "Determined", "Confident"]
     
@@ -38,21 +41,7 @@ struct ResultScreen: View {
         if let dreamEntry = dreamEntry {
             return dreamEntry.interpretation
         } else {
-            // Sample interpretation for new dreams (simulated AI response)
-            return """
-            Your dream reveals fascinating insights about your subconscious mind. The elements in your dream suggest a period of personal growth and transformation.
-            
-            **Key Symbols:**
-            • The imagery represents your inner desires for freedom and exploration
-            • Water elements indicate emotional cleansing and renewal
-            • Flying or elevated perspectives suggest rising above challenges
-            
-            **Emotional Themes:**
-            This dream reflects your current life situation where you're seeking clarity and direction. The positive elements suggest optimism about upcoming changes.
-            
-            **Guidance:**
-            Consider embracing new opportunities that align with your authentic self. Trust your intuition during this transformative period.
-            """
+            return aiInterpretation.isEmpty ? "Generating interpretation..." : aiInterpretation
         }
     }
     
@@ -111,7 +100,7 @@ struct ResultScreen: View {
                 VStack(alignment: .leading, spacing: 15) {
                     SectionHeader(title: "AI Interpretation", icon: "brain.head.profile")
                     
-                    if isLoading {
+                    if aiService.isLoading || (dreamText != nil && aiInterpretation.isEmpty && hasStartedInterpretation) {
                         LoadingView()
                     } else {
                         Text(interpretation)
@@ -124,6 +113,14 @@ struct ResultScreen: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.blue.opacity(0.2), lineWidth: 1)
                             )
+                    }
+                    
+                    // Show AI error if any
+                    if !aiService.errorMessage.isEmpty {
+                        Text(aiService.errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
                     }
                 }
                 
@@ -141,7 +138,7 @@ struct ResultScreen: View {
                 
                 // Action Buttons
                 VStack(spacing: 15) {
-                    if dreamText != nil {
+                    if dreamText != nil && !aiInterpretation.isEmpty {
                         // New dream save button
                         Button(action: {
                             showingSaveOptions = true
@@ -202,11 +199,10 @@ struct ResultScreen: View {
                 }
             }
         }
-
         .sheet(isPresented: $showingSaveOptions) {
             SaveDreamSheet(
                 dreamText: currentDreamText,
-                interpretation: interpretation,
+                interpretation: aiInterpretation,
                 customTitle: $customTitle,
                 selectedMood: $selectedMood,
                 moodOptions: moodOptions,
@@ -218,17 +214,13 @@ struct ResultScreen: View {
             )
         }
         .onAppear {
-            if dreamText != nil {
-                // Simulate API loading for new dreams
-                simulateInterpretationLoading()
+            if dreamText != nil && aiInterpretation.isEmpty {
+                // Get AI interpretation for new dreams
+                Task {
+                    hasStartedInterpretation = true
+                    aiInterpretation = await aiService.interpretDream(currentDreamText)
+                }
             }
-        }
-    }
-    
-    private func simulateInterpretationLoading() {
-        isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isLoading = false
         }
     }
     
@@ -238,7 +230,7 @@ struct ResultScreen: View {
         let dream = DreamEntry(
             title: dreamTitle,
             dreamText: currentDreamText,
-            interpretation: interpretation,
+            interpretation: aiInterpretation,
             date: Date(),
             mood: selectedMood,
             userId: userId
