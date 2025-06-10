@@ -28,15 +28,6 @@ struct HomeScreen: View {
                 Image(systemName: "list.bullet")
                 Text("Dreams")
             }
-            
-            // Settings Tab
-            NavigationStack {
-                SettingsView()
-            }
-            .tabItem {
-                Image(systemName: "gear")
-                Text("Settings")
-            }
         }
         .accentColor(.blue)
     }
@@ -48,16 +39,12 @@ struct DashboardView: View {
             VStack(spacing: 25) {
                 // Header
                 VStack(spacing: 10) {
-                  
-                    
                     Text("Ready to explore your dreams?")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top)
-                
-                
                 
                 // Main Actions
                 VStack(spacing: 15) {
@@ -78,8 +65,6 @@ struct DashboardView: View {
                             color: .purple
                         )
                     }
-                    
-
                 }
                 
                 Spacer(minLength: 20)
@@ -88,6 +73,15 @@ struct DashboardView: View {
         }
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: ProfileView()) {
+                    Image(systemName: "person.circle")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                }
+            }
+        }
     }
 }
 
@@ -153,28 +147,55 @@ struct ActionCard: View {
     }
 }
 
-
-
-struct SettingsView: View {
+struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        List {
-            Section {
-                Button(action: {
-                    authManager.logout()
-                }) {
-                    HStack {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                            .foregroundColor(.red)
-                        Text("Sign Out")
-                            .foregroundColor(.red)
-                    }
+        VStack(spacing: 30) {
+            Spacer()
+            
+            // Profile Header
+            VStack(spacing: 15) {
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.blue)
+                
+                Text("Profile")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                
+                if let userEmail = authManager.currentUser?.email {
+                    Text(userEmail)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
             }
+            
+            Spacer()
+            
+            // Logout Button
+            Button(action: {
+                authManager.logout()
+            }) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                    Text("Sign Out")
+                        .fontWeight(.semibold)
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.red)
+                .cornerRadius(12)
+            }
+            
+            Spacer()
         }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.large)
+        .padding(.horizontal, 30)
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

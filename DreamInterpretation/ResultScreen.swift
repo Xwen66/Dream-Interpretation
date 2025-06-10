@@ -192,13 +192,6 @@ struct ResultScreen: View {
         }
         .navigationTitle("Interpretation")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    dismiss()
-                }
-            }
-        }
         .sheet(isPresented: $showingSaveOptions) {
             SaveDreamSheet(
                 dreamText: currentDreamText,

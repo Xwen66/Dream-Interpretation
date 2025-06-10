@@ -12,13 +12,15 @@ import FirebaseAuth
 // MARK: - AI Service
 
 class AIService: ObservableObject {
-    private let apiKey = "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"
+    private let apiKey = "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"
     private let baseURL = "https://openrouter.ai/api/v1/chat/completions"
     
     @Published var isLoading = false
     @Published var errorMessage = ""
     
     func interpretDream(_ dreamText: String) async -> String {
+        print("🤖 Starting AI interpretation for dream text: \(dreamText.prefix(50))...")
+        
         await MainActor.run {
             isLoading = true
             errorMessage = ""
@@ -40,7 +42,7 @@ class AIService: ObservableObject {
         """
         
         let requestBody: [String: Any] = [
-            "model": "anthropic/claude-3.5-sonnet",
+            "model": "openai/gpt-3.5-turbo",
             "messages": [
                 [
                     "role": "user",
@@ -53,6 +55,7 @@ class AIService: ObservableObject {
         
         do {
             guard let url = URL(string: baseURL) else {
+                print("❌ Invalid API URL: \(baseURL)")
                 await MainActor.run {
                     self.errorMessage = "Invalid API URL"
                     self.isLoading = false
@@ -66,43 +69,78 @@ class AIService: ObservableObject {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("Dream-Interpretation-App", forHTTPHeaderField: "HTTP-Referer")
             
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
+            request.httpBody = jsonData
+            
+            print("🌐 Making API request to: \(baseURL)")
+            print("🔑 Using API key: \(apiKey.prefix(20))...")
             
             let (data, response) = try await URLSession.shared.data(for: request)
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("HTTP Status Code: \(httpResponse.statusCode)")
+                print("📡 HTTP Status Code: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode != 200 {
+                    print("❌ Non-200 status code: \(httpResponse.statusCode)")
+                    
+                    // Print response data for debugging
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("🔍 API Response: \(responseString)")
+                    }
+                }
             }
             
-            if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let choices = jsonResponse["choices"] as? [[String: Any]],
+            // Parse the response
+            guard let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                print("❌ Failed to parse JSON response")
+                await MainActor.run {
+                    self.errorMessage = "Invalid JSON response from API"
+                    self.isLoading = false
+                }
+                return "Unable to interpret dream at this time. Please try again."
+            }
+            
+            print("✅ Received JSON response: \(jsonResponse.keys)")
+            
+            // Check for API error first
+            if let error = jsonResponse["error"] as? [String: Any] {
+                let errorMessage = error["message"] as? String ?? "Unknown API error"
+                let errorCode = error["code"] as? String ?? "unknown"
+                print("❌ API Error - Code: \(errorCode), Message: \(errorMessage)")
+                
+                await MainActor.run {
+                    self.errorMessage = "API Error: \(errorMessage)"
+                    self.isLoading = false
+                }
+                return "Unable to interpret dream at this time. Please try again."
+            }
+            
+            // Parse successful response
+            if let choices = jsonResponse["choices"] as? [[String: Any]],
                let firstChoice = choices.first,
                let message = firstChoice["message"] as? [String: Any],
                let content = message["content"] as? String {
+                
+                print("✅ Successfully received AI interpretation")
                 
                 await MainActor.run {
                     self.isLoading = false
                 }
                 return content.trimmingCharacters(in: .whitespacesAndNewlines)
             } else {
-                // Try to parse error message
-                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let error = jsonResponse["error"] as? [String: Any],
-                   let errorMessage = error["message"] as? String {
-                    await MainActor.run {
-                        self.errorMessage = "AI Error: \(errorMessage)"
-                        self.isLoading = false
-                    }
-                } else {
-                    await MainActor.run {
-                        self.errorMessage = "Failed to parse AI response"
-                        self.isLoading = false
-                    }
+                print("❌ Failed to parse choices/message/content from response")
+                print("🔍 Response structure: \(jsonResponse)")
+                
+                await MainActor.run {
+                    self.errorMessage = "Failed to parse AI response"
+                    self.isLoading = false
                 }
                 return "Unable to interpret dream at this time. Please try again."
             }
             
         } catch {
+            print("❌ Network/Request error: \(error.localizedDescription)")
+            
             await MainActor.run {
                 self.errorMessage = "Network error: \(error.localizedDescription)"
                 self.isLoading = false

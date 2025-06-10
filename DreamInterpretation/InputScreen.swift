@@ -37,34 +37,26 @@ struct InputScreen: View {
                     Text("Dream Description")
                         .font(.headline)
                     
-                    TextEditor(text: $dreamText)
-                        .frame(minHeight: 200)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
-                        )
-                        .overlay(
-                            Group {
-                                if dreamText.isEmpty {
-                                    VStack {
-                                        HStack {
-                                            Text("I dreamed about...")
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 8)
-                                                .padding(.top, 8)
-                                            Spacer()
-                                        }
-                                        Spacer()
-                                    }
-                                }
-                            }
-                        )
+                    ZStack(alignment: .topLeading) {
+                        TextEditor(text: $dreamText)
+                            .frame(minHeight: 200)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                        
+                        if dreamText.isEmpty {
+                            Text("I dreamed about...")
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 20)
+                                .allowsHitTesting(false)
+                        }
+                    }
                 }
-                
-
                 
                 // Action Buttons
                 VStack(spacing: 15) {
@@ -99,12 +91,6 @@ struct InputScreen: View {
         .navigationTitle("New Dream")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Save Draft") {
                     // Save draft functionality - UI only
