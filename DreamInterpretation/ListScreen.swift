@@ -126,10 +126,23 @@ struct DreamRowView: View {
             // Header with title and date
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(dream.title)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
+                    HStack {
+                        Text(dream.title)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        
+                        if dream.isDraft {
+                            Text("DRAFT")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange)
+                                .cornerRadius(4)
+                        }
+                    }
                     
                     Text(dream.date, style: .date)
                         .font(.caption)
@@ -148,15 +161,25 @@ struct DreamRowView: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
             
-            // Footer with interpretation preview
+            // Footer with interpretation/draft status
             HStack {
-                Image(systemName: "sparkles")
-                    .font(.caption)
-                    .foregroundColor(.blue)
-                
-                Text("Interpretation available")
-                    .font(.caption)
-                    .foregroundColor(.blue)
+                if dream.isDraft {
+                    Image(systemName: "doc.text")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    
+                    Text("Tap to interpret")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    
+                    Text("Interpretation available")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
                 
                 Spacer()
                 

@@ -12,7 +12,7 @@ import FirebaseAuth
 // MARK: - AI Service
 
 class AIService: ObservableObject {
-    private let apiKey = "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"
+    private let apiKey = "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"
     private let baseURL = "https://openrouter.ai/api/v1/chat/completions"
     
     @Published var isLoading = false
@@ -161,8 +161,24 @@ struct DreamEntry: Identifiable, Codable {
     let mood: String
     let userId: String
     
+    // Computed property to check if this is a draft
+    var isDraft: Bool {
+        return interpretation == "Draft - No interpretation yet"
+    }
+    
     // Custom initializer for creating new dreams
     init(title: String, dreamText: String, interpretation: String, date: Date = Date(), mood: String, userId: String) {
+        self.title = title
+        self.dreamText = dreamText
+        self.interpretation = interpretation
+        self.date = date
+        self.mood = mood
+        self.userId = userId
+    }
+    
+    // Initializer with existing ID for updates
+    init(id: String?, title: String, dreamText: String, interpretation: String, date: Date, mood: String, userId: String) {
+        self.id = id
         self.title = title
         self.dreamText = dreamText
         self.interpretation = interpretation

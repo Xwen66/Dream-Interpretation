@@ -164,16 +164,47 @@ struct ResultScreen: View {
                         .disabled(firestoreManager.isLoading)
                     }
                     
-                    if dreamEntry != nil {
-                        Button(action: {
-                            // Edit dream functionality - UI only
-                        }) {
-                            HStack {
-                                Image(systemName: "pencil")
-                                Text("Edit Dream")
+                    if let dreamEntry = dreamEntry {
+                        if dreamEntry.isDraft {
+                            // Interpret draft button
+                            Button(action: {
+                                Task {
+                                    hasStartedInterpretation = true
+                                    aiInterpretation = await aiService.interpretDream(currentDreamText)
+                                    // Update the dream with interpretation
+                                    await updateDreamWithInterpretation()
+                                }
+                            }) {
+                                HStack {
+                                    if aiService.isLoading {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .foregroundColor(.white)
+                                    } else {
+                                        Image(systemName: "sparkles")
+                                    }
+                                    Text("Interpret Dream")
+                                        .fontWeight(.semibold)
+                                }
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .cornerRadius(12)
                             }
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
+                            .disabled(aiService.isLoading)
+                        } else {
+                            Button(action: {
+                                // Edit dream functionality - UI only
+                            }) {
+                                HStack {
+                                    Image(systemName: "pencil")
+                                    Text("Edit Dream")
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            }
                         }
                     }
                     
@@ -235,6 +266,23 @@ struct ResultScreen: View {
             showingSaveOptions = false
             dismiss()
         }
+    }
+    
+    private func updateDreamWithInterpretation() async {
+        guard let dreamEntry = dreamEntry,
+              let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let updatedDream = DreamEntry(
+            id: dreamEntry.id,
+            title: dreamEntry.title,
+            dreamText: dreamEntry.dreamText,
+            interpretation: aiInterpretation,
+            date: dreamEntry.date,
+            mood: dreamEntry.mood,
+            userId: userId
+        )
+        
+        await firestoreManager.updateDream(updatedDream)
     }
 }
 
