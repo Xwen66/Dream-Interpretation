@@ -19,6 +19,9 @@ struct ResultScreen: View {
     @State private var showingSaveOptions = false
     @State private var aiInterpretation = ""
     @State private var hasStartedInterpretation = false
+    @State private var showingEditSheet = false
+    @State private var editTitle = ""
+    @State private var editMood = ""
     
     private let moodOptions = ["Happy", "Excited", "Peaceful", "Anxious", "Scared", "Worried", "Sad", "Lonely", "Determined", "Confident"]
     
@@ -117,10 +120,42 @@ struct ResultScreen: View {
                     
                     // Show AI error if any
                     if !aiService.errorMessage.isEmpty {
-                        Text(aiService.errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
+                        VStack(spacing: 15) {
+                            Text(aiService.errorMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                            
+                            Button(action: {
+                                Task {
+                                    hasStartedInterpretation = true
+                                    aiInterpretation = await aiService.interpretDream(currentDreamText)
+                                    // If this is an existing dream entry, update it
+                                    if dreamEntry != nil {
+                                        await updateDreamWithInterpretation()
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    if aiService.isLoading {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .foregroundColor(.white)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                    }
+                                    Text("Retry")
+                                        .fontWeight(.semibold)
+                                }
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .cornerRadius(12)
+                            }
+                            .disabled(aiService.isLoading)
+                        }
                     }
                 }
                 
@@ -181,9 +216,9 @@ struct ResultScreen: View {
                                             .scaleEffect(0.8)
                                             .foregroundColor(.white)
                                     } else {
-                                        Image(systemName: "sparkles")
+                                        Image(systemName: hasStartedInterpretation && !aiService.errorMessage.isEmpty ? "arrow.clockwise" : "sparkles")
                                     }
-                                    Text("Interpret Dream")
+                                    Text(hasStartedInterpretation && !aiService.errorMessage.isEmpty ? "Retry Interpretation" : "Interpret Dream")
                                         .fontWeight(.semibold)
                                 }
                                 .font(.headline)
@@ -196,7 +231,7 @@ struct ResultScreen: View {
                             .disabled(aiService.isLoading)
                         } else {
                             Button(action: {
-                                // Edit dream functionality - UI only
+                                showingEditSheet = true
                             }) {
                                 HStack {
                                     Image(systemName: "pencil")
@@ -237,6 +272,19 @@ struct ResultScreen: View {
                 }
             )
         }
+        .sheet(isPresented: $showingEditSheet) {
+            EditDreamSheet(
+                dreamEntry: dreamEntry!,
+                editTitle: $editTitle,
+                editMood: $editMood,
+                moodOptions: moodOptions,
+                onSave: {
+                    Task {
+                        await updateDreamDetails()
+                    }
+                }
+            )
+        }
         .onAppear {
             if dreamText != nil && aiInterpretation.isEmpty {
                 // Get AI interpretation for new dreams
@@ -244,6 +292,12 @@ struct ResultScreen: View {
                     hasStartedInterpretation = true
                     aiInterpretation = await aiService.interpretDream(currentDreamText)
                 }
+            }
+            
+            // Initialize edit fields with current dream data
+            if let dreamEntry = dreamEntry {
+                editTitle = dreamEntry.title
+                editMood = dreamEntry.mood
             }
         }
     }
@@ -283,6 +337,27 @@ struct ResultScreen: View {
         )
         
         await firestoreManager.updateDream(updatedDream)
+    }
+    
+    private func updateDreamDetails() async {
+        guard let dreamEntry = dreamEntry,
+              let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let updatedDream = DreamEntry(
+            id: dreamEntry.id,
+            title: editTitle,
+            dreamText: dreamEntry.dreamText,
+            interpretation: dreamEntry.interpretation,
+            date: dreamEntry.date,
+            mood: editMood,
+            userId: userId
+        )
+        
+        await firestoreManager.updateDream(updatedDream)
+        
+        if firestoreManager.errorMessage.isEmpty {
+            showingEditSheet = false
+        }
     }
 }
 
@@ -438,5 +513,111 @@ struct SaveDreamSheet: View {
             date: Date(),
             mood: "Excited"
         ))
+    }
+}
+
+// MARK: - Edit Dream Sheet
+
+struct EditDreamSheet: View {
+    let dreamEntry: DreamEntry
+    @Binding var editTitle: String
+    @Binding var editMood: String
+    let moodOptions: [String]
+    let onSave: () -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var firestoreManager: FirestoreManager
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 25) {
+                VStack(spacing: 15) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.blue)
+                    
+                    Text("Edit Dream")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                .padding(.top)
+                
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Dream Title")
+                        .font(.headline)
+                    
+                    TextField("Enter a title for your dream", text: $editTitle)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                }
+                
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Mood")
+                        .font(.headline)
+                    
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 10) {
+                        ForEach(moodOptions, id: \.self) { mood in
+                            Button(action: {
+                                editMood = mood
+                            }) {
+                                Text(mood)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(editMood == mood ? .white : .primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(editMood == mood ? Color.blue : Color(.systemGray6))
+                                    .cornerRadius(8)
+                            }
+                        }
+                    }
+                }
+                
+                // Show error message if any
+                if !firestoreManager.errorMessage.isEmpty {
+                    Text(firestoreManager.errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
+                
+                Spacer()
+                
+                // Action Buttons
+                VStack(spacing: 15) {
+                    Button(action: {
+                        onSave()
+                    }) {
+                        HStack {
+                            if firestoreManager.isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .foregroundColor(.white)
+                            } else {
+                                Image(systemName: "checkmark")
+                            }
+                            Text("Save Changes")
+                                .fontWeight(.semibold)
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                    }
+                    .disabled(firestoreManager.isLoading || editTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .padding(.horizontal)
+            .navigationTitle("Edit Dream")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 } 
