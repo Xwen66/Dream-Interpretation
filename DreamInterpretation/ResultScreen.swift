@@ -88,34 +88,179 @@ struct ResultScreen: View {
                 .padding(.top)
                 
                 // Dream Text Section
-                VStack(alignment: .leading, spacing: 15) {
-                    SectionHeader(title: "Your Dream", icon: "moon.fill")
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        Image(systemName: "moon.fill")
+                            .font(.title2)
+                            .foregroundColor(.indigo)
+                        Text("Your Dream")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.indigo)
+                        Spacer()
+                    }
                     
                     Text(currentDreamText)
                         .font(.body)
+                        .lineSpacing(4)
                         .foregroundColor(.primary)
-                        .padding()
+                        .padding(16)
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                 }
                 
                 // Interpretation Section
-                VStack(alignment: .leading, spacing: 15) {
-                    SectionHeader(title: "AI Interpretation", icon: "brain.head.profile")
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        Image(systemName: "brain.head.profile")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                        Text("AI Interpretation")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.blue)
+                        Spacer()
+                    }
                     
                     if aiService.isLoading || (dreamText != nil && aiInterpretation.isEmpty && hasStartedInterpretation) {
                         LoadingView()
                     } else {
-                        Text(interpretation)
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .padding()
-                            .background(Color.blue.opacity(0.05))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                            )
+                        VStack(spacing: 25) {
+                            if interpretation.contains("=== INTERPRETATION SECTION ===") {
+                                // 1. INTERPRETATION SECTION
+                                VStack(alignment: .leading, spacing: 20) {
+                                    HStack {
+                                        Image(systemName: "brain.head.profile")
+                                            .font(.title)
+                                            .foregroundColor(.blue)
+                                        Text("Dream Interpretation")
+                                            .font(.title)
+                                            .fontWeight(.heavy)
+                                            .foregroundColor(.blue)
+                                        Spacer()
+                                    }
+                                    
+                                    let interpretationContent = extractMainSection(from: interpretation, section: "INTERPRETATION")
+                                    VStack(alignment: .leading, spacing: 15) {
+                                        ForEach(parseInterpretationSections(interpretationContent), id: \.title) { section in
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text(section.title)
+                                                    .font(.headline)
+                                                    .fontWeight(.bold)
+                                                    .foregroundColor(.primary)
+                                                
+                                                Text(section.content)
+                                                    .font(.body)
+                                                    .lineSpacing(4)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .background(Color.blue.opacity(0.05))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                )
+                                
+                                // 2. SYMBOLS SECTION
+                                VStack(alignment: .leading, spacing: 20) {
+                                    HStack {
+                                        Image(systemName: "sparkles")
+                                            .font(.title)
+                                            .foregroundColor(.green)
+                                        Text("Dream Symbols")
+                                            .font(.title)
+                                            .fontWeight(.heavy)
+                                            .foregroundColor(.green)
+                                        Spacer()
+                                    }
+                                    
+                                    let symbolsContent = extractMainSection(from: interpretation, section: "SYMBOLS")
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        ForEach(parseSymbols(from: symbolsContent), id: \.symbol) { symbolData in
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text(symbolData.symbol)
+                                                    .font(.title3)
+                                                    .fontWeight(.bold)
+                                                    .foregroundColor(.green)
+                                                
+                                                Text(symbolData.meaning)
+                                                    .font(.body)
+                                                    .lineSpacing(4)
+                                                    .foregroundColor(.primary)
+                                            }
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal, 12)
+                                            .background(Color.green.opacity(0.1))
+                                            .cornerRadius(8)
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .background(Color.green.opacity(0.05))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                                )
+                                
+                                // 3. LUCID DREAM GUIDANCE SECTION
+                                VStack(alignment: .leading, spacing: 20) {
+                                    HStack {
+                                        Image(systemName: "moon.stars")
+                                            .font(.title)
+                                            .foregroundColor(.purple)
+                                        Text("Lucid Dream Guidance")
+                                            .font(.title)
+                                            .fontWeight(.heavy)
+                                            .foregroundColor(.purple)
+                                        Spacer()
+                                    }
+                                    
+                                    let guidanceContent = extractMainSection(from: interpretation, section: "LUCID")
+                                    VStack(alignment: .leading, spacing: 15) {
+                                        ForEach(parseLucidGuidanceSections(guidanceContent), id: \.title) { section in
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text(section.title)
+                                                    .font(.headline)
+                                                    .fontWeight(.bold)
+                                                    .foregroundColor(.primary)
+                                                
+                                                Text(section.content)
+                                                    .font(.body)
+                                                    .lineSpacing(4)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding()
+                                .background(Color.purple.opacity(0.05))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+                                )
+                            } else {
+                                // Fallback for old format
+                                VStack(alignment: .leading, spacing: 15) {
+                                    Text(interpretation)
+                                        .font(.body)
+                                        .lineLimit(nil)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding()
+                                .background(Color.blue.opacity(0.05))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        }
                     }
                     
                     // Show AI error if any
@@ -161,8 +306,17 @@ struct ResultScreen: View {
                 
                 // Mood Section (if from existing entry)
                 if let entry = dreamEntry {
-                    VStack(alignment: .leading, spacing: 15) {
-                        SectionHeader(title: "Mood", icon: "heart.fill")
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack {
+                            Image(systemName: "heart.fill")
+                                .font(.title2)
+                                .foregroundColor(.pink)
+                            Text("Mood")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.pink)
+                            Spacer()
+                        }
                         
                         HStack {
                             MoodBadge(mood: entry.mood)
@@ -620,4 +774,142 @@ struct EditDreamSheet: View {
             }
         }
     }
+}
+
+// Add helper functions at the bottom of the file, before the preview
+extension ResultScreen {
+    private func extractMainSection(from text: String, section: String) -> String {
+        switch section {
+        case "INTERPRETATION":
+            return extractSection(from: text, startMarker: "=== INTERPRETATION SECTION ===", endMarker: "=== LUCID DREAM GUIDANCE ===")
+        case "LUCID":
+            return extractSection(from: text, startMarker: "=== LUCID DREAM GUIDANCE ===", endMarker: "=== SYMBOLS FORMAT ===")
+        case "SYMBOLS":
+            return extractSection(from: text, startMarker: "=== SYMBOLS FORMAT ===", endMarker: nil)
+        default:
+            return ""
+        }
+    }
+    
+    private func extractSection(from text: String, startMarker: String, endMarker: String?) -> String {
+        guard let startRange = text.range(of: startMarker) else {
+            return ""
+        }
+        
+        let start = text.index(startRange.upperBound, offsetBy: 0)
+        
+        if let endMarker = endMarker,
+           let endRange = text.range(of: endMarker) {
+            let extractedText = text[start..<endRange.lowerBound]
+            return extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            // Extract to end of text
+            let extractedText = text[start...]
+            return String(extractedText).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+    
+    private func parseSymbols(from symbolsText: String) -> [SymbolData] {
+        var symbols: [SymbolData] = []
+        let lines = symbolsText.components(separatedBy: .newlines)
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedLine.isEmpty && trimmedLine.contains("|") {
+                let parts = trimmedLine.split(separator: "|", maxSplits: 1)
+                if parts.count == 2 {
+                    let symbolPart = String(parts[0]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    let meaningPart = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    // Extract just the symbol name (remove "Symbol:" prefix if present)
+                    let symbol = symbolPart.replacingOccurrences(of: "Symbol:", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    // Extract just the meaning (remove "Meaning:" prefix if present)
+                    let meaning = meaningPart.replacingOccurrences(of: "Meaning:", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    if !symbol.isEmpty && !meaning.isEmpty {
+                        symbols.append(SymbolData(symbol: symbol, meaning: meaning))
+                    }
+                }
+            }
+        }
+        
+        return symbols
+    }
+    
+    private func parseInterpretationSections(_ interpretationText: String) -> [SectionData] {
+        var sections: [SectionData] = []
+        let lines = interpretationText.components(separatedBy: .newlines)
+        var currentTitle = ""
+        var currentContent = ""
+        
+        let sectionTitles = ["Overall Theme", "Key Symbols Analysis", "Emotional Journey", "Personal Insights"]
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            if sectionTitles.contains(trimmedLine) {
+                // Save previous section if exists
+                if !currentTitle.isEmpty && !currentContent.isEmpty {
+                    sections.append(SectionData(title: currentTitle, content: currentContent.trimmingCharacters(in: .whitespacesAndNewlines)))
+                }
+                
+                // Start new section
+                currentTitle = trimmedLine
+                currentContent = ""
+            } else if !trimmedLine.isEmpty && !currentTitle.isEmpty {
+                currentContent += trimmedLine + "\n"
+            }
+        }
+        
+        // Add the last section
+        if !currentTitle.isEmpty && !currentContent.isEmpty {
+            sections.append(SectionData(title: currentTitle, content: currentContent.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        
+        return sections
+    }
+    
+    private func parseLucidGuidanceSections(_ guidanceText: String) -> [SectionData] {
+        var sections: [SectionData] = []
+        let lines = guidanceText.components(separatedBy: .newlines)
+        var currentTitle = ""
+        var currentContent = ""
+        
+        let sectionTitles = ["Dream Awareness Techniques", "Reality Check Triggers", "Lucid Action Suggestions", "Practice Recommendations"]
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            if sectionTitles.contains(trimmedLine) {
+                // Save previous section if exists
+                if !currentTitle.isEmpty && !currentContent.isEmpty {
+                    sections.append(SectionData(title: currentTitle, content: currentContent.trimmingCharacters(in: .whitespacesAndNewlines)))
+                }
+                
+                // Start new section
+                currentTitle = trimmedLine
+                currentContent = ""
+            } else if !trimmedLine.isEmpty && !currentTitle.isEmpty {
+                currentContent += trimmedLine + "\n"
+            }
+        }
+        
+        // Add the last section
+        if !currentTitle.isEmpty && !currentContent.isEmpty {
+            sections.append(SectionData(title: currentTitle, content: currentContent.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        
+        return sections
+    }
+}
+
+struct SymbolData {
+    let symbol: String
+    let meaning: String
+}
+
+struct SectionData {
+    let title: String
+    let content: String
 } 

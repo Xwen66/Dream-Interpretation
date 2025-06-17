@@ -12,8 +12,8 @@ import FirebaseAuth
 // MARK: - AI Service
 
 class AIService: ObservableObject {
-    private let apiKey = "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"
-    private let baseURL = "https://openrouter.ai/api/v1/chat/completions"
+    private let apiKey = "sk_zuUNUD8XTjnOE6cPVUJICO6TPYAJipHLE9iKzbsx-iI"
+    private let baseURL = "https://api.novita.ai/v3/openai/chat/completions"
     
     @Published var isLoading = false
     @Published var errorMessage = ""
@@ -28,50 +28,73 @@ class AIService: ObservableObject {
         
         // Step 1: Generate prompt that combines with user input
         let prompt = """
-        You are an expert dream interpreter with deep knowledge of psychology, symbolism, and dream analysis. You combine insights from Jungian psychology, Freudian analysis, and modern dream research to provide meaningful interpretations.
+        Role: You're a professional dream interpreter using Jungian psychology, symbolic analysis, and positive psychology. Generate a response in this exact format with three distinct sections:
+
+        === INTERPRETATION SECTION ===
+        
+        Overall Theme
+        [20-40 word theme summary using "may suggest/could reflect". Connect to waking life.]
+
+        Key Symbols Analysis
+        [Symbol Name]
+        [Psychological/cultural context]
+        [Personalized interpretation]
+
+        [Repeat for 3-5 key symbols found in the dream]
+
+        Emotional Journey
+        [Trace emotion progression through dream stages]
+
+        Personal Insights
+        [Actionable non-prescriptive suggestion]
+
+        [Second suggestion]
+        
+        === LUCID DREAM GUIDANCE ===
+        
+        Dream Awareness Techniques
+        [Specific techniques to become lucid in similar dreams]
+        
+        Reality Check Triggers
+        [Elements from this dream that could serve as reality check triggers]
+        
+        Lucid Action Suggestions
+        [What to try if you become lucid in a similar dream scenario]
+        
+        Practice Recommendations
+        [Science-backed techniques for improving lucid dreaming based on dream content]
+        
+        === SYMBOLS FORMAT ===
+        Symbol: [single word only] | Meaning: [brief positive meaning, 8 words max]
+        Symbol: [single word only] | Meaning: [brief positive meaning, 8 words max]
+        [Continue for each symbol found]
+
+        Rules:
+        - Prioritize emotions and key elements from the dream
+        - For dark elements, provide light-based reframing and positive interpretations
+        - NEVER diagnose conditions (use "may indicate stress")
+        - NEVER predict futures
+        - NEVER impose religious views
+        - NEVER use absolute statements
+        - NEVER include references, citations, or sources
+        - For flying/water/falling: Reference Jungian archetypes
+        - Include research-backed techniques for lucid dreaming
+        - Max 5 symbols total
+        - Use plain text formatting, no markdown syntax
+        - Keep symbol meanings concise (10-15 words maximum)
+        - Structure content with clear section headers for better readability
+        - SYMBOLS MUST BE SINGLE WORDS ONLY (e.g., "Flying", "Water", "House", "Car")
+        - GUIDANCE MUST BE POSITIVE, UPLIFTING, AND ENCOURAGING
+        - Focus on growth, learning, and positive transformation in guidance
+        - Reframe challenges as opportunities for personal development
+        - FOLLOW THE EXACT FORMAT SHOWN IN THE EXAMPLE ABOVE
 
         **DREAM TO INTERPRET:**
         \(dreamText)
-
-        **INSTRUCTIONS:**
-        Provide a comprehensive dream interpretation using the following structured format. Be empathetic, insightful, and avoid overly technical jargon. Focus on practical insights the dreamer can apply to their life.
-
-        **RESPONSE FORMAT:**
-
-        ## 🔍 **Dream Overview**
-        Provide a brief 2-3 sentence summary of the dream's main narrative and emotional tone.
-
-        ## 🎭 **Key Symbols & Meanings**
-        Identify and explain 3-5 most significant symbols, objects, or characters:
-        • **[Symbol Name]**: Explanation of meaning and significance
-        • **[Symbol Name]**: Explanation of meaning and significance
-
-        ## 💭 **Emotional Landscape**
-        Analyze the emotions present in the dream:
-        • Primary emotions experienced
-        • What these emotions might represent in waking life
-        • Any emotional conflicts or resolutions
-
-        ## 🌉 **Connections to Waking Life**
-        Explore possible links to the dreamer's current life situation:
-        • Recent events or concerns that might have influenced the dream
-        • Relationships or situations reflected in the dream
-        • Subconscious processing of daily experiences
-
-        ## 🌱 **Personal Growth Insights**
-        Offer meaningful guidance for personal development:
-        • What the dream might be trying to tell you
-        • Areas of life to pay attention to
-        • Positive actions or mindset shifts to consider
-
-        ## 💡 **Key Takeaway**
-        Conclude with one powerful, memorable insight or message from the dream.
-
-        **TONE:** Be warm, understanding, and non-judgmental. Speak as if you're a wise, caring friend offering insights. Use "you" to address the dreamer directly and make it personal.
         """
         
         let requestBody: [String: Any] = [
-            "model": "openai/gpt-3.5-turbo",
+            "model": "meta-llama/llama-3.1-8b-instruct",
             "messages": [
                 [
                     "role": "user",
@@ -96,7 +119,6 @@ class AIService: ObservableObject {
             request.httpMethod = "POST"
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("Dream-Interpretation-App", forHTTPHeaderField: "HTTP-Referer")
             
             let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
             request.httpBody = jsonData
@@ -131,11 +153,12 @@ class AIService: ObservableObject {
             
             print("✅ Received JSON response: \(jsonResponse.keys)")
             
-            // Check for API error first
+            // Check for API error first (Novita AI format)
             if let error = jsonResponse["error"] as? [String: Any] {
                 let errorMessage = error["message"] as? String ?? "Unknown API error"
-                let errorCode = error["code"] as? String ?? "unknown"
-                print("❌ API Error - Code: \(errorCode), Message: \(errorMessage)")
+                let errorCode = error["code"] as? Int ?? 0
+                let errorReason = error["reason"] as? String ?? "unknown"
+                print("❌ API Error - Code: \(errorCode), Reason: \(errorReason), Message: \(errorMessage)")
                 
                 await MainActor.run {
                     self.errorMessage = "API Error: \(errorMessage)"
@@ -182,7 +205,7 @@ class AIService: ObservableObject {
 // MARK: - Data Models
 
 struct DreamEntry: Identifiable, Codable {
-    @DocumentID var id: String?
+    var id: String?
     let title: String
     let dreamText: String
     let interpretation: String
@@ -228,43 +251,84 @@ struct DreamEntry: Identifiable, Codable {
     }
 }
 
-// MARK: - Firestore Manager
+// MARK: - Local Storage Manager (formerly Firestore Manager)
 
 class FirestoreManager: ObservableObject {
     @Published var dreams: [DreamEntry] = []
     @Published var isLoading = false
     @Published var errorMessage = ""
     
-    private let db = Firestore.firestore()
-    private var listener: ListenerRegistration?
+    private let fileManager = FileManager.default
+    private var documentsDirectory: URL {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+    }
     
     init() {
-        setupListener()
+        loadDreamsForCurrentUser()
     }
     
-    deinit {
-        listener?.remove()
+    // Get the JSON file URL for a specific user
+    private func dreamsFileURL(for userId: String) -> URL {
+        return documentsDirectory.appendingPathComponent("dreams_\(userId).json")
     }
     
-    // Set up real-time listener for user's dreams
-    private func setupListener() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
+    // Load dreams for the current user from local JSON file
+    private func loadDreamsForCurrentUser() {
+        guard let userId = Auth.auth().currentUser?.uid else { 
+            print("❌ No authenticated user found for loading dreams")
+            dreams = []
+            return 
+        }
         
-        listener = db.collection("dreams")
-            .whereField("userId", isEqualTo: userId)
-            .order(by: "date", descending: true)
-            .addSnapshotListener { [weak self] snapshot, error in
-                if let error = error {
-                    self?.errorMessage = error.localizedDescription
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else { return }
-                
-                self?.dreams = documents.compactMap { document in
-                    try? document.data(as: DreamEntry.self)
-                }
+        print("📁 Loading dreams for user: \(userId)")
+        loadDreams(for: userId)
+    }
+    
+    // Load dreams from JSON file for specific user
+    private func loadDreams(for userId: String) {
+        let fileURL = dreamsFileURL(for: userId)
+        
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            print("📄 No dreams file found for user \(userId), starting with empty array")
+            dreams = []
+            return
+        }
+        
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let decodedDreams = try decoder.decode([DreamEntry].self, from: data)
+            
+            DispatchQueue.main.async {
+                self.dreams = decodedDreams.sorted { $0.date > $1.date }
+                print("✅ Loaded \(decodedDreams.count) dreams for user \(userId)")
             }
+        } catch {
+            print("❌ Failed to load dreams: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to load dreams: \(error.localizedDescription)"
+                self.dreams = []
+            }
+        }
+    }
+    
+    // Save dreams to JSON file for specific user
+    private func saveDreamsToFile(for userId: String) {
+        let fileURL = dreamsFileURL(for: userId)
+        
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(dreams)
+            try data.write(to: fileURL)
+            print("✅ Successfully saved \(dreams.count) dreams to file for user \(userId)")
+        } catch {
+            print("❌ Failed to save dreams to file: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to save dreams: \(error.localizedDescription)"
+            }
+        }
     }
     
     // Save a new dream
@@ -274,68 +338,151 @@ class FirestoreManager: ObservableObject {
             errorMessage = ""
         }
         
-        do {
-            try db.collection("dreams").addDocument(from: dream)
+        // Check authentication
+        guard let userId = Auth.auth().currentUser?.uid else {
             await MainActor.run {
+                self.errorMessage = "User not authenticated"
                 self.isLoading = false
             }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
+            print("❌ Cannot save dream: User not authenticated")
+            return
+        }
+        
+        // Create dream with unique ID and userId
+        let dreamToSave = DreamEntry(
+            id: UUID().uuidString,
+            title: dream.title,
+            dreamText: dream.dreamText,
+            interpretation: dream.interpretation,
+            date: dream.date,
+            mood: dream.mood,
+            userId: userId
+        )
+        
+        print("💾 Attempting to save dream for user: \(userId)")
+        print("📄 Dream title: \(dreamToSave.title)")
+        
+        await MainActor.run {
+            // Add to current dreams array
+            self.dreams.insert(dreamToSave, at: 0) // Insert at beginning for newest first
+            self.dreams.sort { $0.date > $1.date } // Ensure proper sorting
+        }
+        
+        // Save to file in background
+        DispatchQueue.global(qos: .background).async {
+            self.saveDreamsToFile(for: userId)
+            
+            DispatchQueue.main.async {
                 self.isLoading = false
+                print("✅ Successfully saved dream: \(dreamToSave.id ?? "unknown")")
             }
         }
     }
     
     // Update an existing dream
     func updateDream(_ dream: DreamEntry) async {
-        guard let dreamId = dream.id else { return }
+        guard let dreamId = dream.id else { 
+            print("❌ Cannot update dream: No document ID")
+            return 
+        }
+        
+        guard let userId = Auth.auth().currentUser?.uid else {
+            await MainActor.run {
+                self.errorMessage = "User not authenticated"
+                self.isLoading = false
+            }
+            print("❌ Cannot update dream: User not authenticated")
+            return
+        }
         
         await MainActor.run {
             isLoading = true
             errorMessage = ""
         }
         
-        do {
-            try db.collection("dreams").document(dreamId).setData(from: dream)
-            await MainActor.run {
-                self.isLoading = false
+        print("🔄 Attempting to update dream: \(dreamId)")
+        
+        await MainActor.run {
+            // Find and update the dream in the array
+            if let index = self.dreams.firstIndex(where: { $0.id == dreamId }) {
+                self.dreams[index] = dream
+                self.dreams.sort { $0.date > $1.date } // Maintain sorting
             }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
+        }
+        
+        // Save to file in background
+        DispatchQueue.global(qos: .background).async {
+            self.saveDreamsToFile(for: userId)
+            
+            DispatchQueue.main.async {
                 self.isLoading = false
+                print("✅ Successfully updated dream: \(dreamId)")
             }
         }
     }
     
     // Delete a dream
     func deleteDream(_ dream: DreamEntry) async {
-        guard let dreamId = dream.id else { return }
+        guard let dreamId = dream.id else { 
+            print("❌ Cannot delete dream: No document ID")
+            return 
+        }
+        
+        guard let userId = Auth.auth().currentUser?.uid else {
+            await MainActor.run {
+                self.errorMessage = "User not authenticated"
+                self.isLoading = false
+            }
+            print("❌ Cannot delete dream: User not authenticated")
+            return
+        }
         
         await MainActor.run {
             isLoading = true
             errorMessage = ""
         }
         
-        do {
-            try await db.collection("dreams").document(dreamId).delete()
-            await MainActor.run {
+        print("🗑️ Attempting to delete dream: \(dreamId)")
+        
+        await MainActor.run {
+            // Remove the dream from the array
+            self.dreams.removeAll { $0.id == dreamId }
+        }
+        
+        // Save to file in background
+        DispatchQueue.global(qos: .background).async {
+            self.saveDreamsToFile(for: userId)
+            
+            DispatchQueue.main.async {
                 self.isLoading = false
-            }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
+                print("✅ Successfully deleted dream: \(dreamId)")
             }
         }
     }
     
-    // Refresh the listener when user changes
+    // Refresh dreams when user changes
     func refreshForCurrentUser() {
-        listener?.remove()
-        dreams = []
-        setupListener()
+        print("🔄 Refreshing dreams for current user")
+        loadDreamsForCurrentUser()
+    }
+    
+    // Get file path for debugging
+    func getDreamsFilePath() -> String? {
+        guard let userId = Auth.auth().currentUser?.uid else { return nil }
+        return dreamsFileURL(for: userId).path
+    }
+    
+    // Clear all dreams for current user (for debugging/reset)
+    func clearAllDreams() async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        await MainActor.run {
+            self.dreams = []
+        }
+        
+        let fileURL = dreamsFileURL(for: userId)
+        try? fileManager.removeItem(at: fileURL)
+        print("🗑️ Cleared all dreams for user: \(userId)")
     }
 }
 
